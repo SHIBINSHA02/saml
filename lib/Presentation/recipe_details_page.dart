@@ -1,78 +1,105 @@
 import 'package:flutter/material.dart';
+import 'ingredients_card.dart';
+import 'steps_page.dart';
 
-class RecipeDetailsPage extends StatelessWidget {
-  final Map<String, dynamic> recipeData; // Store the recipe data
+class RecipeDetailsPage extends StatefulWidget {
+  final Map<String, dynamic> recipeData;
 
-  RecipeDetailsPage({required this.recipeData}); // Constructor to accept data
+  RecipeDetailsPage({required this.recipeData});
+
+  @override
+  _RecipeDetailsPageState createState() => _RecipeDetailsPageState();
+}
+
+class _RecipeDetailsPageState extends State<RecipeDetailsPage> {
+  int _currentIndex = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _nextPage() {
+    if (_currentIndex < (widget.recipeData['ingredients']?.length ?? 0) - 1) {
+      _pageController.nextPage(
+        duration: Duration(milliseconds: 300),
+        curve: Curves.ease,
+      );
+    } else {
+      // Navigate to steps page when all ingredients are shown
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StepsPage(steps: widget.recipeData['steps'] ?? []),
+        ),
+      );
+    }
+  }
+
+  void _previousPage() {
+    if (_currentIndex > 0) {
+      _pageController.previousPage(
+        duration: Duration(milliseconds: 300),
+        curve: Curves.ease,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    List<dynamic> ingredients = widget.recipeData['ingredients'] ?? [];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-            recipeData['recipe_name'] ?? 'Recipe'), // Default title if null
+        title: Text(widget.recipeData['recipe_name'] ?? 'Recipe Details'),
       ),
-      body: SingleChildScrollView(
-        // Wrap with SingleChildScrollView
-        child: Padding(
-          padding: const EdgeInsets.all(16.0), // Add padding for better layout
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Ingredients:', // Ingredients header
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              // Display ingredients with images
-              ...recipeData['ingredients']?.map<Widget>((ingredient) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${ingredient['name']}: ${ingredient['quantity']}',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        SizedBox(
-                            height:
-                                8), // Space between ingredient text and image
-                        Image.network(
-                          ingredient['image_url'] ??
-                              'https://via.placeholder.com/100', // Default image if null
-                          height: 100, // Set a fixed height for the images
-                          fit: BoxFit
-                              .cover, // Adjust the image to cover the space
-                        ),
-                        SizedBox(height: 4), // Space between image and URL
-                      ],
-                    );
-                  }).toList() ??
-                  [], // Handle null case for ingredients
-              SizedBox(height: 20), // Space between ingredients and steps
-              Text(
-                'Steps:', // Steps header
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              // Display steps
-              ...recipeData['steps']?.map<Widget>((step) {
-                    return Text(
-                      '${step['index']}. ${step['step_name']}: ${step['description']}', // Ensure these keys exist
-                      style: TextStyle(fontSize: 16),
-                    );
-                  }).toList() ??
-                  [], // Handle null case for steps
-              SizedBox(height: 20), // Space before conclusion
-              Text(
-                'Conclusion:', // Conclusion header
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                recipeData['conclusion'] ??
-                    'No conclusion available.', // Default conclusion if null
-                style: TextStyle(fontSize: 16),
-              ),
-            ],
+      body: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: ingredients.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return IngredientsCard(
+                  name: ingredients[index]['name'] ?? 'Ingredient',
+                  imageUrl: ingredients[index]['image_url'] ??
+                      'https://via.placeholder.com/150',
+                  quantity: ingredients[index]['quantity'] ?? 'N/A',
+                );
+              },
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: _currentIndex > 0 ? _previousPage : null,
+                ),
+                Text('${_currentIndex + 1}/${ingredients.length}'),
+                IconButton(
+                  icon: Icon(Icons.arrow_forward),
+                  onPressed: _nextPage,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
